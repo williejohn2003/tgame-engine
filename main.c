@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 
-pthread_t t;
+pthread_t t; // user entry thread
 
 //max size of level 255 pixels total 2^8 256-1
 #define h 10
@@ -61,17 +61,17 @@ char **init_lvl(){
     return tmp;
 }
 
-Game init_game(){
-    Game g;
-    g.player_pos[0][0]=0;
-    g.player_pos[0][1]=0;
-    g.top_pipe_pos[0][0]=0;
-    g.top_pipe_pos[1][1]=0;
-    g.bottom_pipe_pos[0][0]=0;
-    g.bottom_pipe_pos[1][1]=0;
-    g.pipe_size=3;
-    g.pipe_gap=5;
-    g.state=0;
+Game *init_game(){
+    Game *g=calloc(1,sizeof(Game));
+    g->player_pos[0][0]=0;
+    g->player_pos[0][1]=0;
+    g->top_pipe_pos[0][0]=0;
+    g->top_pipe_pos[1][1]=0;
+    g->bottom_pipe_pos[0][0]=0;
+    g->bottom_pipe_pos[1][1]=0;
+    g->pipe_size=3;
+    g->pipe_gap=5;
+    g->state=0;
     
     return g;
 }
@@ -79,25 +79,27 @@ Game init_game(){
 //create a thread for keypresses
 void* key_press(void *game){
     Game *g=(Game*)game;
-    char n=fgetc(stdin);
-    (*g).input_state=true;
-    pthread_exit(NULL);
+    while(1){
+        char n=fgetc(stdin);
+        (*g).input_state=true;
+    }
+    //pthread_exit(NULL);
 }
 
 int main(){
     char **lvl=init_lvl();
-    Game game=init_game();
+    Game *game=init_game();
+    pthread_create(&t,NULL,key_press, (void*)&(*game));
 
         print_lvl(lvl);
     while(1){
-        pthread_create(&t,NULL,key_press, (void*)&game);
-        pthread_join(t,NULL);
-        printf("no input\n"); 
-        if(game.input_state){
-            printf("input state: %d\n",game.input_state);
-            game.input_state=0;
+        //printf("no input\n"); 
+        if(game->input_state!=0){
+            printf("input state: %d\n",game->input_state);
+            game->input_state=0;
         }
     }
+        pthread_join(t,NULL); //ensure thread is done
     
     return 0;
 }
