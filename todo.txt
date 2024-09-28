@@ -1,0 +1,9 @@
+********* ISSUES *********
+> 
+
+[] - add player mvement
+[] - configure a way to display pipes
+       [] - make this universal
+
+
+
