@@ -12,6 +12,18 @@ pthread_t t; // user entry thread
 #define w 50
 #define pw 4
 
+typedef struct Movement{
+    char key;
+    bool key_pressed;
+    enum{
+        UP='w',
+        DOWN='s',
+        LEFT='a',
+        RIGHT='d',
+        QUIT='q'
+    }direction;
+}Movement;
+
 typedef struct Game{
     int8_t player_pos[1][2]; /** player position based on its x,y coordinate*/
     int8_t top_pipe_pos[2][2];
@@ -20,6 +32,7 @@ typedef struct Game{
     int8_t pipe_gap;
     int8_t state;
     bool input_state;
+    Movement *movement;
 }Game;
 
 void print_lvl(char **lvl){
@@ -71,7 +84,12 @@ Game *init_game(){
     g->bottom_pipe_pos[1][1]=0;
     g->pipe_size=3;
     g->pipe_gap=5;
-    g->state=0;
+    g->state=1;
+    g->input_state=0;
+
+    g->movement=calloc(1,sizeof(Movement));
+    g->movement->key=0;
+    g->movement->key_pressed=false;
     
     return g;
 }
@@ -79,11 +97,54 @@ Game *init_game(){
 //create a thread for keypresses
 void* key_press(void *game){
     Game *g=(Game*)game;
-    while(1){
-        char n=fgetc(stdin);
-        (*g).input_state=true;
+    char *key;
+    while(g->state!=0){
+        //scanf("%1s",key);
+        if(!g->movement->key_pressed){
+            key[0]=fgetc(stdin);
+            fflush(stdin);
+            g->movement->key_pressed=true;
+            g->movement->key=key[0];
+            printf("read: %c\n",g->movement->key);
+            g->input_state=true;
+            g->movement->direction=g->movement->key;
+        }
     }
-    //pthread_exit(NULL);
+    pthread_exit(NULL);
+}
+
+char key_handler(Game *game){
+    int ret=0;
+    game->movement->direction=game->movement->key;
+    switch(game->movement->direction){
+        case UP: ret=game->movement->direction; printf("up key\n"); break;
+        case DOWN: ret=game->movement->direction; printf("down key\n"); break;
+        case LEFT: ret=game->movement->direction; printf("left key\n"); break;
+        case RIGHT: ret=game->movement->direction; printf("right key\n"); break;
+        case QUIT: ret=game->movement->direction; printf("quit key\n"); break;
+        defualt: ret=game->movement->direction; printf("invalid key\n");break;
+                 
+    };
+    return ret;
+}
+
+//not recognizing key
+
+/**
+ * run game loop
+ */
+void run(char ***lvl, Game **game){
+    print_lvl(*lvl);
+
+    while((*game)->state!=0){
+        if((*game)->input_state!=0){
+            printf("input state: %d\n",(*game)->input_state);
+            printf("key pressed: %d %d\n",(*game)->movement->key,(*game)->movement->direction);
+            key_handler((*game));
+            (*game)->movement->key_pressed=false;
+            (*game)->input_state=false;
+        }
+    }
 }
 
 int main(){
@@ -91,15 +152,8 @@ int main(){
     Game *game=init_game();
     pthread_create(&t,NULL,key_press, (void*)&(*game));
 
-        print_lvl(lvl);
-    while(1){
-        //printf("no input\n"); 
-        if(game->input_state!=0){
-            printf("input state: %d\n",game->input_state);
-            game->input_state=0;
-        }
-    }
-        pthread_join(t,NULL); //ensure thread is done
+    run(&lvl,&game); //engine loop
+    pthread_join(t,NULL); //ensure thread is done
     
     return 0;
 }
