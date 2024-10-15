@@ -94,21 +94,25 @@ Game *init_game(){
     return g;
 }
 
+//flush stdin
+void flush_stdin(){
+    char t=fgetc(stdin);
+    while(t!='\n' && t!=EOF){
+        t=fgetc(stdin);
+    }
+}
+
 //create a thread for keypresses
 void* key_press(void *game){
     Game *g=(Game*)game;
     char *key;
     while(g->state!=0){
         //scanf("%1s",key);
-        if(!g->movement->key_pressed){
-            key[0]=fgetc(stdin);
-            fflush(stdin);
-            g->movement->key_pressed=true;
-            g->movement->key=key[0];
+            g->movement->key=getchar();
+            flush_stdin();
             printf("read: %c\n",g->movement->key);
             g->input_state=true;
             g->movement->direction=g->movement->key;
-        }
     }
     pthread_exit(NULL);
 }
@@ -117,14 +121,23 @@ char key_handler(Game *game){
     int ret=0;
     game->movement->direction=game->movement->key;
     switch(game->movement->direction){
-        case UP: ret=game->movement->direction; printf("up key\n"); break;
-        case DOWN: ret=game->movement->direction; printf("down key\n"); break;
-        case LEFT: ret=game->movement->direction; printf("left key\n"); break;
-        case RIGHT: ret=game->movement->direction; printf("right key\n"); break;
-        case QUIT: ret=game->movement->direction; printf("quit key\n"); break;
-        defualt: ret=game->movement->direction; printf("invalid key\n");break;
-                 
-    };
+        case UP:    ret=game->movement->direction;  printf("up key\n");
+                    if(game->player_pos[0][1]<10){ //TODO: use lvl bounds
+                        game->player_pos[0][1]+=1;
+                    }
+        break;
+        case DOWN:  ret=game->movement->direction;  printf("down key\n"); break;
+                    //TODO: add checks here for bounds before attempting to move player
+                    //TODO: moving wrong axis
+                    if(game->player_pos[0][1]>0){
+                        game->player_pos[0][1]-=1;
+                    }
+        break;
+        case RIGHT: ret=game->movement->direction;  printf("right key\n"); break;
+            game->player_pos[0][0]=0;
+        case QUIT:  ret=game->state=-1;             printf("quit key\n"); break;
+        default:    ret=game->movement->direction;  printf("invalid key\n"); break;
+    }
     return ret;
 }
 
@@ -135,9 +148,12 @@ char key_handler(Game *game){
  */
 void run(char ***lvl, Game **game){
     print_lvl(*lvl);
-
     while((*game)->state!=0){
         if((*game)->input_state!=0){
+            //lets place the player in the level
+            (*lvl)[(*game)->player_pos[0][0]][(*game)->player_pos[0][1]]='$';
+            print_lvl(*lvl);
+            //lets update the position of the player
             printf("input state: %d\n",(*game)->input_state);
             printf("key pressed: %d %d\n",(*game)->movement->key,(*game)->movement->direction);
             key_handler((*game));
@@ -149,6 +165,7 @@ void run(char ***lvl, Game **game){
 
 int main(){
     char **lvl=init_lvl();
+    //init player within level
     Game *game=init_game();
     pthread_create(&t,NULL,key_press, (void*)&(*game));
 
