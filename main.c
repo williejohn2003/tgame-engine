@@ -17,7 +17,7 @@ typedef struct Movement{
     bool key_pressed;
     enum{
         UP='w',
-        DOWN='s',
+        DOWN='s',//115
         LEFT='a',
         RIGHT='d',
         QUIT='q'
@@ -25,17 +25,17 @@ typedef struct Movement{
 }Movement;
 
 typedef struct Player{
-    int8_t x;
-    int8_t y;
+    uint8_t x;
+    uint8_t y;
 }Player;
 
 typedef struct Game{
     Player player_pos; /** player position based on its x,y coordinate*/
-    int8_t top_pipe_pos[2][2];
-    int8_t bottom_pipe_pos[2][2];
-    int8_t pipe_size;
-    int8_t pipe_gap;
-    int8_t state;
+    uint8_t top_pipe_pos[2][2];
+    uint8_t bottom_pipe_pos[2][2];
+    uint8_t pipe_size;
+    uint8_t pipe_gap;
+    uint8_t state;
     bool input_state;
     Movement *movement;
 }Game;
@@ -81,8 +81,8 @@ char **init_lvl(){
 
 Game *init_game(){
     Game *g=calloc(1,sizeof(Game));
-    g->player_pos.x=0;
-    g->player_pos.y=1;
+    g->player_pos.x=3;
+    g->player_pos.y=5;
     g->top_pipe_pos[0][0]=0;
     g->top_pipe_pos[1][1]=0;
     g->bottom_pipe_pos[0][0]=0;
@@ -122,25 +122,33 @@ void* key_press(void *game){
     pthread_exit(NULL);
 }
 
-char key_handler(Game *game){
-    int ret=0; game->movement->direction=game->movement->key;
-    switch(game->movement->direction){
-        case UP:    ret=game->movement->direction;  printf("up key 'w'\n");
-                    if(game->player_pos.y<10 && game->player_pos.y>0){ //TODO: use lvl bounds
-                        game->player_pos.y-=1;
+char key_handler(Game **game){
+    int ret=0; (*game)->movement->direction=(*game)->movement->key;
+    switch((*game)->movement->direction){
+        case UP:    ret=(*game)->movement->direction;  printf("up key 'w'\n");
+                    if((*game)->player_pos.y<h && (*game)->player_pos.y>0){ //TODO: use lvl bounds
+                        (*game)->player_pos.y-=1;
                     }
         break;
-        case DOWN:  ret=game->movement->direction;  printf("down key 's'\n"); break;
+        case DOWN:  ret=(*game)->movement->direction;  printf("down key 's'\n");
                     //TODO: add checks here for bounds before attempting to move player
                     //TODO: moving wrong axis
-                    if(game->player_pos.y<10 && game->player_pos.y>0){ //TODO: use lvl bounds
-                        game->player_pos.y+=1;
+                    if((*game)->player_pos.y<h && (*game)->player_pos.y>0){ //TODO: use lvl bounds
+                        (*game)->player_pos.y+=1;
                     }
         break;
-        case RIGHT: ret=game->movement->direction;  printf("right key 'd'\n"); break;
-            game->player_pos.x+=1;
-        case QUIT:  ret=game->state=0;             printf("quit key 'q'\n"); break;
-        default:    ret=game->movement->direction;  printf("invalid key\n"); break;
+        case RIGHT: ret=(*game)->movement->direction;  printf("right key 'd'\n");
+                    if((*game)->player_pos.x<w && (*game)->player_pos.x>0){ //TODO: use lvl bounds
+                    (*game)->player_pos.x+=1;
+                    }
+        break;
+        case LEFT: ret=(*game)->movement->direction;  printf("right key 'a'\n");
+                    if((*game)->player_pos.x<w && (*game)->player_pos.x>0){ //TODO: use lvl bounds
+                    (*game)->player_pos.x-=1;
+                    }
+        break;
+        case QUIT:  ret=(*game)->state=0;             printf("quit key 'q'\n"); break;
+        default:    ret=(*game)->movement->direction;  printf("invalid key\n"); break;
     }
     return ret;
 }
@@ -149,7 +157,7 @@ char key_handler(Game *game){
  * Runner
  * run game loop
  */
-void run(char ***lvl, Game **game){
+void run(char *(**lvl), Game **game){
     print_lvl(*lvl);
     while((*game)->state!=0){
         if((*game)->input_state!=0){
@@ -161,11 +169,12 @@ void run(char ***lvl, Game **game){
             //lets place the player in the level
             //swapped x and y for now. because of the way 2D arrays work
             (*lvl)[(*game)->player_pos.y][(*game)->player_pos.x]='$';
+            //TODO: this may not be handled correctly
             print_lvl(*lvl);
             //lets update the position of the player
             printf("input state: %d\n",(*game)->input_state);
             printf("key pressed: %d %d\n",(*game)->movement->key,(*game)->movement->direction);
-            key_handler((*game));
+            key_handler(*&(game));
             printf("pos: %d,%d",(*game)->player_pos.x,(*game)->player_pos.y);
             (*game)->movement->key_pressed=false;
             (*game)->input_state=false;
@@ -177,8 +186,7 @@ int main(){
     char **lvl=init_lvl();
     //init player within level
     Game *game=init_game();
-    pthread_create(&t,NULL,key_press, (void*)&(*game));
-
+    pthread_create(&t,NULL,key_press,(void*)(game));//(void*)&(*game));
     run(&lvl,&game); //engine loop
     pthread_join(t,NULL); //ensure thread is done
     
