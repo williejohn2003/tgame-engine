@@ -1,4 +1,5 @@
 ********* ISSUES *********
 [] - add player movement
 [] - configure a way to display pipes
-       [] - make this universal
+  [] - make this universal
+[] - use termios for key press detection

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include <pthread.h>
 
@@ -39,6 +40,12 @@ typedef struct Game{
   bool input_state;
   Movement *movement;
 }Game;
+
+#ifdef DEBUG
+#define DEBUG(format, ...) fprintf(stdout,"[DEBUG] " format "\n", __VA_ARGS__)
+#else
+#define DEBUG(...)
+#endif
 
 void print_lvl(char **lvl){
   for(int i=0; i<h; i++){
@@ -112,10 +119,11 @@ void* key_press(void *game){
   Game *g=(Game*)game;
   char *key;
   while(g->state!=0){
-    scanf("%1s",key);
+    //scanf("%1s",key);
+    //TODO: use termios for raw input detection without enter key
     g->movement->key=getchar();
     flush_stdin();
-    printf("read: %c\n",g->movement->key);
+    DEBUG("read: %c\n",g->movement->key);
     g->input_state=true;
     g->movement->direction=g->movement->key;
   }
@@ -125,9 +133,9 @@ void* key_press(void *game){
 char key_handler(Game **game){
   int ret=0; (*game)->movement->direction=(*game)->movement->key;
   switch((*game)->movement->direction){
-    case UP:    ret=(*game)->movement->direction;  printf("up key 'w'\n");
+    case UP:    ret =(*game)->movement->direction;  printf("up key 'w'\n");
                 if((*game)->player_pos.y<h && (*game)->player_pos.y>0){ //TODO: use lvl bounds
-                  (*game)->player_pos.y-=1;
+                  (*game)->player_pos.y -= 1;
                 }
                 break;
     case DOWN:  ret=(*game)->movement->direction;  printf("down key 's'\n");
